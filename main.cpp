@@ -185,6 +185,7 @@ static char ui_anim_chars[3] = {'.', 'o', 'O'};
 #define UI_STATE_DISP_IP   1
 #define UI_STATE_DISP_GW   2
 #define UI_STATE_RUNPROG   3
+#define UI_STATE_STOPPROG  4
 
 static unsigned char ui_state = UI_STATE_DEFAULT;
 static unsigned char ui_state_runprog = 0;
@@ -366,9 +367,15 @@ void ui_state_machine() {
 					os.reset_to_ap();
 					#endif
 				} else {  // if no other button is clicked, go to Run Program main menu
-					os.lcd_print_line_clear_pgm(PSTR("Run a Program:"), 0);
-					os.lcd_print_line_clear_pgm(PSTR("Click B3 to list"), 1);
-					ui_state = UI_STATE_RUNPROG;
+					if (os.status.program_busy) {
+						os.lcd_print_line_clear_pgm(PSTR("Hold B3 to stop"), 0);
+						os.lcd_print_line_clear_pgm(PSTR(" "), 1);
+						ui_state = UI_STATE_STOPPROG;
+					} else {
+						os.lcd_print_line_clear_pgm(PSTR("Run a Program:"), 0);
+						os.lcd_print_line_clear_pgm(PSTR("Click B3 to list"), 1);
+						ui_state = UI_STATE_RUNPROG;
+					}
 				}
 			} else {  // clicking B3: switch board display (cycle through master and all extension boards)
 				os.status.display_board = (os.status.display_board + 1) % (os.nboards);
@@ -400,6 +407,14 @@ void ui_state_machine() {
 				} else {
 					os.lcd_print_line_clear_pgm(PSTR("0. Test (1 min)"), 1);
 				}
+			}
+		}
+		break;
+	case UI_STATE_STOPPROG:
+		if ((button & BUTTON_MASK)==BUTTON_3) {
+			if (button & BUTTON_FLAG_HOLD) {
+				reset_all_stations();
+				ui_state = UI_STATE_DEFAULT;
 			}
 		}
 		break;
